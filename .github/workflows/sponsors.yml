@@ -9,7 +9,7 @@ on:
     - cron: '0 1 * * *'
 jobs:
   sponsors:
-    runs-on: ubuntu-latest
+    runs-on: monkci-runners-4vcpu
     steps:
       - uses: actions/checkout@v6
         with:
