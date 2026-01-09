@@ -1,20 +1,28 @@
-
 name: cache-test
 on: workflow_dispatch
 jobs:
   test:
     runs-on: self-hosted
     steps:
-      - name: Create test data
-        run: |
-          mkdir -p ~/.test-cache
-          echo "Hello $(date)" > ~/.test-cache/data.txt
-          cat ~/.test-cache/data.txt
-          
       - name: Save cache
+        id: cache
         uses: actions/cache@v4
         with:
           path: ~/.test-cache
           key: test-${{ github.run_id }}
           restore-keys: |
             test-
+      
+      - name: Check cache status
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" == "true" ]; then
+            echo "Cache hit! Using cached data."
+          else
+            echo "Cache miss! Creating new data."
+          fi
+      
+      - name: Create test data
+        run: |
+          mkdir -p ~/.test-cache
+          echo "Hello $(date)" > ~/.test-cache/data.txt
+          cat ~/.test-cache/data.txt
