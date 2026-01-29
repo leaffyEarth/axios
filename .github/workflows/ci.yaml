@@ -3,7 +3,7 @@ name: cache-test
 on: workflow_dispatch
 jobs:
   test:
-    runs-on: monkci-ubuntu-24.04-8
+    runs-on: monkci-ubuntu-24.04-4
     steps:
       - name: Save cache
         id: cache
