@@ -1,30 +1,112 @@
+name: cache-speed-benchmark
 
-# New file update
-name: cache-test
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+
 jobs:
-  test:
-    runs-on: monkci-ubuntu-24.04-2
+  benchmark:
+    runs-on: monkci-ubuntu-24.04-4
+
     steps:
-      - name: Save cache
-        id: cache
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      ############################################################
+      # 🟦 NODE CACHE TEST
+      ############################################################
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate Node Dependencies
+        run: |
+          mkdir node-test
+          cd node-test
+          npm init -y
+          npm install express react lodash axios moment typescript webpack
+
+      - name: Cache Node Modules
+        id: node-cache
+        run: echo "START_NODE=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Save Node Cache
         uses: actions/cache@v4
         with:
-          path: ~/.test-cache
-          key: test-${{ github.run_id }}
-          restore-keys: |
-            test-
-      
-      - name: Check cache status
+          path: node-test/node_modules
+          key: node-cache-v1
+
+      - name: Measure Node Cache Upload Time
         run: |
-          if [ "${{ steps.cache.outputs.cache-hit }}" == "true" ]; then
-            echo "Cache hit! Using cached data."
-          else
-            echo "Cache miss! Creating new data."
-          fi
-      
-      - name: Create test data
+          END=$(date +%s)
+          echo "Node Cache Upload Time: $((END-START_NODE)) seconds"
+
+      ############################################################
+      # 🟢 GO CACHE TEST
+      ############################################################
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+
+      - name: Generate Go Dependencies
         run: |
-          mkdir -p ~/.test-cache
-          echo "Hello $(date)" > ~/.test-cache/data.txt
-          cat ~/.test-cache/data.txt
+          mkdir go-test
+          cd go-test
+          go mod init example.com/test
+          go get github.com/gin-gonic/gin
+          go get github.com/sirupsen/logrus
+          go mod tidy
+
+      - name: Start Go Cache Timer
+        run: echo "START_GO=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Save Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-cache-v1
+
+      - name: Measure Go Cache Upload Time
+        run: |
+          END=$(date +%s)
+          echo "Go Cache Upload Time: $((END-START_GO)) seconds"
+
+      ############################################################
+      # 🟨 JAVA (MAVEN) CACHE TEST
+      ############################################################
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Generate Maven Dependencies
+        run: |
+          mkdir java-test
+          cd java-test
+          mvn archetype:generate -DgroupId=com.example \
+                                 -DartifactId=testapp \
+                                 -DarchetypeArtifactId=maven-archetype-quickstart \
+                                 -DinteractiveMode=false
+          cd testapp
+          mvn dependency:resolve
+
+      - name: Start Maven Cache Timer
+        run: echo "START_MVN=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Save Maven Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-cache-v1
+
+      - name: Measure Maven Cache Upload Time
+        run: |
+          END=$(date +%s)
+          echo "Maven Cache Upload Time: $((END-START_MVN)) seconds"
